@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>趣味猜数字小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .game-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 420px;
+            padding: 35px 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+        }
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #777;
+            margin-bottom: 30px;
+        }
+        .input-wrap {
+            margin: 25px 0;
+        }
+        #guessInput {
+            width: 75%;
+            padding: 14px 16px;
+            font-size: 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            outline: none;
+            transition: border 0.3s;
+        }
+        #guessInput:focus {
+            border-color: #667eea;
+        }
+        button {
+            padding: 14px 22px;
+            margin-left:8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size:17px;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+        button:hover {
+            opacity:0.9;
+            transform: scale(1.03);
+        }
+        .tip-box {
+            min-height:60px;
+            margin:20px 0;
+            padding:15px;
+            border-radius:12px;
+            font-size:19px;
+            font-weight:500;
+        }
+        .tip-normal{
+            background:#f7f8fc;
+            color:#444;
+        }
+        .tip-success{
+            background:#dcfce7;
+            color:#166534;
+        }
+        .tip-warn{
+            background:#fff3cd;
+            color:#92400e;
+        }
+        .info {
+            display:flex;
+            justify-content: space-between;
+            color:#666;
+            margin-top:20px;
+            font-size:16px;
+        }
+        #restartBtn{
+            margin-top:25px;
+            background:#222;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-card">
+        <h1>🎮 猜数字游戏</h1>
+        <p class="subtitle">系统随机生成 1 ~ 100 的数字，快来猜猜看吧！</p>
+        <div class="input-wrap">
+            <input type="number" id="guessInput" placeholder="输入数字" min="1" max="100">
+            <button onclick="checkGuess()">提交</button>
+        </div>
+        <div id="tip" class="tip-box tip-normal">请输入1~100之间的数字</div>
+        <div class="info">
+            <span>猜测次数：<span id="count">0</span></span>
+            <span>历史记录：<span id="history"></span></span>
+        </div>
+        <button id="restartBtn" onclick="resetGame()">重新开始</button>
+    </div>
+
+<script>
+    let secretNum;
+    let count;
+    let historyArr;
+    const tipDom = document.getElementById("tip");
+    const countDom = document.getElementById("count");
+    const historyDom = document.getElementById("history");
+    const inputDom = document.getElementById("guessInput");
+
+    // 初始化游戏
+    function resetGame(){
+        secretNum = Math.floor(Math.random() * 100) +1;
+        count = 0;
+        historyArr = [];
+        tipDom.className = "tip-box tip-normal";
+        tipDom.innerText = "请输入1~100之间的数字";
+        countDom.innerText = count;
+        historyDom.innerText = "";
+        inputDom.value = "";
+    }
+    resetGame();
+
+    function checkGuess(){
+        const val = Number(inputDom.value);
+        if(isNaN(val) || val<1 || val>100){
+            tipDom.className = "tip-box tip-warn";
+            tipDom.innerText = "⚠️ 请输入1-100有效数字！";
+            return;
+        }
+        count++;
+        historyArr.push(val);
+        countDom.innerText = count;
+        historyDom.innerText = historyArr.join(",");
+
+        if(val > secretNum){
+            tipDom.className = "tip-box tip-warn";
+            tipDom.innerText = "📉 猜大了！再试试更小的数字";
+        }else if(val < secretNum){
+            tipDom.className = "tip-box tip-warn";
+            tipDom.innerText = "📈 猜小了！试试更大的数字";
+        }else{
+            tipDom.className = "tip-box tip-success";
+            tipDom.innerText = `🎉恭喜你猜对啦！答案就是${secretNum}，一共猜了${count}次`;
+        }
+        inputDom.value = "";
+    }
+    //回车提交
+    inputDom.addEventListener("keydown",function(e){
+        if(e.key === "Enter") checkGuess();
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连连看小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #f0f8ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .header {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        .info {
+            font-size: 18px;
+            margin-bottom:10px;
+        }
+        button {
+            padding:8px 20px;
+            font-size:16px;
+            border:none;
+            background:#409eff;
+            color:#fff;
+            border-radius:6px;
+            cursor:pointer;
+            margin:0 5px;
+        }
+        button:hover {
+            background:#66b1ff;
+        }
+        #gameBox {
+            border:2px solid #34495e;
+            background:#fff;
+            display: grid;
+            gap:2px;
+        }
+        .item {
+            width:50px;
+            height:50px;
+            background:#90caf9;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            font-size:24px;
+            cursor:pointer;
+            border-radius:4px;
+            user-select:none;
+        }
+        .item.selected {
+            background:#ff9800;
+        }
+        .item.hidden {
+            visibility:hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>连连看</h1>
+        <div class="info">
+            分数：<span id="score">0</span>
+            &nbsp;&nbsp;时间：<span id="time">0</span>秒
+        </div>
+        <button onclick="restartGame()">重新开始</button>
+    </div>
+    <div id="gameBox"></div>
+
+    <script>
+        // 游戏配置
+        const ROW = 8;
+        const COL = 10;
+        const EMOJIS = ["🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🍒","🥝","🍑","🥭","🍍","🥥","🫐"];
+        let map = [];
+        let selected = null;
+        let score = 0;
+        let time = 0;
+        let timer = null;
+
+        // 初始化游戏
+        function initGame(){
+            score = 0;
+            time = 0;
+            document.getElementById("score").innerText = score;
+            document.getElementById("time").innerText = time;
+            if(timer) clearInterval(timer);
+            timer = setInterval(()=>{
+                time++;
+                document.getElementById("time").innerText = time;
+            },1000);
+
+            // 生成配对数组
+            let arr = [];
+            const total = ROW * COL;
+            const pairCount = total / 2;
+            for(let i=0;i<pairCount;i++){
+                const emoji = EMOJIS[i % EMOJIS.length];
+                arr.push(emoji, emoji);
+            }
+            // 打乱
+            for(let i=arr.length-1;i>0;i--){
+                const j = Math.floor(Math.random()*(i+1));
+                [arr[i],arr[j]] = [arr[j],arr[i]];
+            }
+            // 转为二维地图
+            map = [];
+            let idx = 0;
+            for(let r=0;r<ROW;r++){
+                let row = [];
+                for(let c=0;c<COL;c++){
+                    row.push(arr[idx++]);
+                }
+                map.push(row);
+            }
+            render();
+            selected = null;
+        }
+
+        // 渲染界面
+        function render(){
+            const box = document.getElementById("gameBox");
+            box.innerHTML = "";
+            box.style.gridTemplateRows = `repeat(${ROW},50px)`;
+            box.style.gridTemplateColumns = `repeat(${COL},50px)`;
+            for(let r=0;r<ROW;r++){
+                for(let c=0;c<COL;c++){
+                    const div = document.createElement("div");
+                    div.className = "item";
+                    div.dataset.r = r;
+                    div.dataset.c = c;
+                    div.innerText = map[r][c];
+                    if(map[r][c] === null){
+                        div.classList.add("hidden");
+                    }
+                    div.onclick = ()=>clickItem(r,c);
+                    box.appendChild(div);
+                }
+            }
+        }
+
+        // 判断两点是否可以连通（简单版：直线、一拐、两拐连通）
+        function canConnect(r1,c1,r2,c2){
+            if(map[r1][c1] !== map[r2][c2]) return false;
+            // 同一点
+            if(r1 === r2 && c1 === c2) return false;
+
+            // 1. 直线连通
+            if(isLineOk(r1,c1,r2,c2)) return true;
+            // 2. 一个拐点
+            if(isOneCornerOk(r1,c1,r2,c2)) return true;
+            // 3. 两个拐点
+            if(isTwoCornerOk(r1,c1,r2,c2)) return true;
+            return false;
+        }
+
+        function isLineOk(r1,c1,r2,c2){
+            if(r1 === r2){
+                const minC = Math.min(c1,c2);
+                const maxC = Math.max(c1,c2);
+                for(let c=minC+1;c<maxC;c++){
+                    if(map[r1][c] !== null) return false;
+                }
+                return true;
+            }
+            if(c1 === c2){
+                const minR = Math.min(r1,r2);
+                const maxR = Math.max(r1,r2);
+                for(let r=minR+1;r<maxR;r++){
+                    if(map[r][c1] !== null) return false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        function isOneCornerOk(r1,c1,r2,c2){
+            // 拐点 (r1,c2)
+            if(map[r1][c2] === null && isLineOk(r1,c1,r1,c2) && isLineOk(r1,c2,r2,c2)){
+                return true;
+            }
+            // 拐点 (r2,c1)
+            if(map[r2][c1] === null && isLineOk(r1,c1,r2,c1) && isLineOk(r2,c1,r2,c2)){
+                return true;
+            }
+            return false;
+        }
+
+        function isTwoCornerOk(r1,c1,r2,c2){
+            //横向遍历
+            for(let c=0;c<COL;c++){
+                if(map[r1][c] === null && map[r2][c] === null){
+                    if(isLineOk(r1,c1,r1,c) && isLineOk(r1,c,r2,c) && isLineOk(r2,c,r2,c2)){
+                        return true;
+                    }
+                }
+            }
+            //纵向遍历
+            for(let r=0;r<ROW;r++){
+                if(map[r][c1] === null && map[r][c2] === null){
+                    if(isLineOk(r1,c1,r,c1) && isLineOk(r,c1,r,c2) && isLineOk(r,c2,r2,c2)){
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 点击格子
+        function clickItem(r,c){
+            if(map[r][c] === null) return;
+            const dom = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+            if(selected === null){
+                selected = {r,c};
+                dom.classList.add("selected");
+                return;
+            }
+            // 第二次点击
+            const s = selected;
+            if(s.r === r && s.c === c){
+                selected = null;
+                render();
+                return;
+            }
+            if(canConnect(s.r,s.c,r,c)){
+                //消除
+                map[s.r][s.c] = null;
+                map[r][c] = null;
+                score +=10;
+                document.getElementById("score").innerText = score;
+                selected = null;
+                render();
+                checkWin();
+            }else{
+                selected = {r,c};
+                render();
+                document.querySelector(`[data-r="${r}"][data-c="${c}"]`).classList.add("selected");
+            }
+        }
+
+        // 判断游戏胜利
+        function checkWin(){
+            let count =0;
+            for(let r=0;r<ROW;r++){
+                for(let c=0;c<COL;c++){
+                    if(map[r][c] !== null) count++;
+                }
+            }
+            if(count === 0){
+                clearInterval(timer);
+                alert(`恭喜通关！用时${time}秒，得分${score}`);
+            }
+        }
+
+        function restartGame(){
+            initGame();
+        }
+
+        //启动
+        initGame();
+    </script>
+</body>
+</html>
